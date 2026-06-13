@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "Takda",
+    "slug": "takda",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0d0f"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0d0f"
+      },
+      "package": "com.mikelojeda.takda",
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "takda"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#fcda80",
+          "sounds": [],
+          "mode": "production"
+        }
+      ],
+      "@react-native-google-signin/google-signin"
+    ],
+    "scheme": "takda",
+    "extra": {
+      "eas": {
+        "projectId": "2d3a7684-6102-4f91-934f-88d3032ffd30"
+      }
+    },
+    "owner": "mikelojeda25"
+  }
+}
