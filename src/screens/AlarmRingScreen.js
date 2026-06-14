@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,33 +7,72 @@ import {
   Animated,
   Easing,
   Vibration,
-} from 'react-native';
-import { colors, radius, spacing } from '../utils/theme';
-import { formatTime12 } from '../utils/alarmUtils';
+  NativeModules,
+} from "react-native";
+import { colors, radius, spacing } from "../utils/theme";
+import { formatTime12 } from "../utils/alarmUtils";
 
 export default function AlarmRingScreen({ alarm, onDismiss }) {
   const wobble = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (NativeModules.ActivityModule) {
+      NativeModules.ActivityModule.showWhenLocked();
+    }
     // Wobble animation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(wobble, { toValue: 1, duration: 150, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(wobble, { toValue: -1, duration: 150, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(wobble, { toValue: 1, duration: 150, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(wobble, { toValue: -1, duration: 150, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(wobble, { toValue: 0, duration: 150, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(wobble, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wobble, {
+          toValue: -1,
+          duration: 150,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wobble, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wobble, {
+          toValue: -1,
+          duration: 150,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wobble, {
+          toValue: 0,
+          duration: 150,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
         Animated.delay(800),
-      ])
+      ]),
     ).start();
 
     // Pulse animation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.08, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
+        Animated.timing(pulse, {
+          toValue: 1.08,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
     ).start();
 
     // Vibration pattern
@@ -47,15 +86,21 @@ export default function AlarmRingScreen({ alarm, onDismiss }) {
 
   const rotate = wobble.interpolate({
     inputRange: [-1, 1],
-    outputRange: ['-12deg', '12deg'],
+    outputRange: ["-12deg", "12deg"],
   });
 
   return (
     <View style={styles.container}>
       {/* Background rings */}
-      <Animated.View style={[styles.ring, styles.ring3, { transform: [{ scale: pulse }] }]} />
-      <Animated.View style={[styles.ring, styles.ring2, { transform: [{ scale: pulse }] }]} />
-      <Animated.View style={[styles.ring, styles.ring1, { transform: [{ scale: pulse }] }]} />
+      <Animated.View
+        style={[styles.ring, styles.ring3, { transform: [{ scale: pulse }] }]}
+      />
+      <Animated.View
+        style={[styles.ring, styles.ring2, { transform: [{ scale: pulse }] }]}
+      />
+      <Animated.View
+        style={[styles.ring, styles.ring1, { transform: [{ scale: pulse }] }]}
+      />
 
       <View style={styles.content}>
         {/* Clock emoji with wobble */}
@@ -80,7 +125,11 @@ export default function AlarmRingScreen({ alarm, onDismiss }) {
         <Text style={styles.by}>Set by {alarm.creatorName}</Text>
 
         {/* Dismiss button */}
-        <TouchableOpacity style={styles.dismissBtn} onPress={onDismiss} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.dismissBtn}
+          onPress={onDismiss}
+          activeOpacity={0.85}
+        >
           <Text style={styles.dismissText}>Dismiss</Text>
         </TouchableOpacity>
       </View>
@@ -92,12 +141,12 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 9999,
   },
   ring: {
-    position: 'absolute',
+    position: "absolute",
     borderRadius: 9999,
     borderWidth: 1,
     borderColor: colors.accent,
@@ -106,7 +155,7 @@ const styles = StyleSheet.create({
   ring2: { width: 320, height: 320, opacity: 0.08 },
   ring3: { width: 420, height: 420, opacity: 0.04 },
   content: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
   },
   clockEmoji: {
@@ -114,23 +163,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   time: {
-    fontFamily: 'SpaceMono',
+    fontFamily: "SpaceMono",
     fontSize: 56,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.accent,
     marginBottom: spacing.sm,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.sm,
   },
   desc: {
     fontSize: 15,
     color: colors.text2,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.sm,
     lineHeight: 22,
   },
@@ -152,7 +201,7 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.bg,
     letterSpacing: 0.5,
   },

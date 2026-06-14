@@ -17,30 +17,30 @@ import { useAuth } from "../contexts/AuthContext";
 import { getNextAlarmDate } from "../utils/alarmUtils";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
 import notifee, {
   TriggerType,
   AndroidImportance,
   AndroidVisibility,
+  AndroidCategory,
   EventType,
 } from "@notifee/react-native";
 
-// Handle background events
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  if (type === EventType.ACTION_PRESS || type === EventType.PRESS) {
+  console.log("BACKGROUND EVENT:", type);
+  if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
     await notifee.cancelNotification(detail.notification.id);
   }
 });
 
 async function createNotifeeChannel() {
   await notifee.createChannel({
-    id: "takda-alarm",
+    id: "takda-alarm-v3",
     name: "Takda Alarms",
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: "default",
+    sound: "alarm_sound",
     vibration: true,
-    vibrationPattern: [300, 500, 300, 500],
+    vibrationPattern: [500, 500, 500, 500],
     bypassDnd: true,
     lights: true,
     lightColor: "#fcda80",
@@ -48,7 +48,6 @@ async function createNotifeeChannel() {
 }
 
 async function scheduleAlarmWithNotifee(alarm) {
-  // Cancel existing
   try {
     await notifee.cancelTriggerNotification(alarm.id);
   } catch {}
@@ -56,35 +55,39 @@ async function scheduleAlarmWithNotifee(alarm) {
   if (!alarm.active) return;
 
   const next = getNextAlarmDate(alarm);
-  if (!next || next < new Date()) return;
+  console.log("SCHEDULING:", alarm.title, "next:", next, "now:", new Date());
+  if (!next || next < new Date()) {
+    console.log("SKIPPED - time passed or null");
+    return;
+  }
 
+  console.log("CREATING TRIGGER for:", alarm.title, "at:", next);
   await notifee.createTriggerNotification(
     {
       id: alarm.id,
       title: `⏰ ${alarm.title}`,
       body: alarm.description || "Your alarm is ringing!",
       android: {
-        channelId: "takda-alarm",
+        channelId: "takda-alarm-v3",
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
-        sound: "default",
-        vibrationPattern: [300, 500, 300, 500],
-        pressAction: { id: "default" },
-        fullScreenAction: {
-          id: "default",
-        },
+        sound: "alarm_sound",
+        category: AndroidCategory.ALARM,
+        pressAction: { id: "default", launchActivity: "default" },
+        fullScreenAction: { id: "default", launchActivity: "default" },
         showTimestamp: true,
         timestamp: next.getTime(),
         color: "#fcda80",
+        loopSound: true,
+        ongoing: true,
+        autoCancel: false,
       },
       data: { alarmId: alarm.id },
     },
     {
       type: TriggerType.TIMESTAMP,
       timestamp: next.getTime(),
-      alarmManager: {
-        allowWhileIdle: true,
-      },
+      alarmManager: { allowWhileIdle: true },
     },
   );
 }
@@ -101,11 +104,10 @@ async function registerForPushNotificationsAsync() {
   return token;
 }
 
-export function useAlarms(onRing) {
+export function useAlarms() {
   const { user } = useAuth();
   const [alarms, setAlarms] = useState([]);
 
-  // Setup Notifee channel + permissions
   useEffect(() => {
     (async () => {
       await createNotifeeChannel();
@@ -113,7 +115,6 @@ export function useAlarms(onRing) {
     })();
   }, []);
 
-  // Save push token
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -133,33 +134,17 @@ export function useAlarms(onRing) {
     })();
   }, [user]);
 
-  // Foreground event listener
-  useEffect(() => {
-    const unsub = notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.DELIVERED && detail.notification?.data?.alarmId) {
-        const alarmId = detail.notification.data.alarmId;
-        const alarm = alarms.find((a) => a.id === alarmId);
-        if (alarm && onRing) onRing(alarm);
-      }
-    });
-    return unsub;
-  }, [alarms]);
-
-  // Listen to Firestore alarms
   useEffect(() => {
     if (!user) return;
-
     const q = query(
       collection(db, "alarms"),
       where("members", "array-contains", user.uid),
     );
-
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAlarms(list);
       list.forEach((alarm) => scheduleAlarmWithNotifee(alarm));
     });
-
     return unsub;
   }, [user]);
 
@@ -172,11 +157,7 @@ export function useAlarms(onRing) {
       creatorPhoto: user.photoURL,
       members: [user.uid],
       memberDetails: [
-        {
-          uid: user.uid,
-          name: user.displayName,
-          photoURL: user.photoURL,
-        },
+        { uid: user.uid, name: user.displayName, photoURL: user.photoURL },
       ],
       active: true,
       createdAt: serverTimestamp(),

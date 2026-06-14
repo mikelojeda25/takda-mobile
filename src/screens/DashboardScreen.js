@@ -9,7 +9,6 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-import AlarmRingScreen from "../screens/AlarmRingScreen";
 import { colors, radius, spacing } from "../utils/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlarms } from "../hooks/useAlarms";
@@ -26,8 +25,7 @@ const FILTERS = [
 export default function DashboardScreen({ navigation }) {
   const { user, logout } = useAuth();
   const { alarms, createAlarm, updateAlarm, deleteAlarm, toggleAlarm } =
-    useAlarms((alarm) => setRinging(alarm));
-  const [ringing, setRinging] = useState(null);
+    useAlarms();
   const [filter, setFilter] = useState("all");
   const [showCreate, setShowCreate] = useState(false);
   const [editAlarm, setEditAlarm] = useState(null);
@@ -136,10 +134,6 @@ export default function DashboardScreen({ navigation }) {
         >
           <Text style={styles.fabIcon}>+</Text>
         </TouchableOpacity>
-
-        {ringing && (
-          <AlarmRingScreen alarm={ringing} onDismiss={() => setRinging(null)} />
-        )}
       </View>
 
       {/* Modals */}
@@ -183,11 +177,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
     letterSpacing: 3,
   },
-  greeting: {
-    fontSize: 13,
-    color: colors.text2,
-    marginTop: 2,
-  },
+  greeting: { fontSize: 13, color: colors.text2, marginTop: 2 },
   avatarWrap: { padding: 2 },
   avatar: {
     width: 38,
@@ -216,10 +206,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  filterActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
+  filterActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   filterText: { fontSize: 13, color: colors.text2, fontWeight: "500" },
   filterTextActive: { color: colors.bg, fontWeight: "700" },
   count: {
