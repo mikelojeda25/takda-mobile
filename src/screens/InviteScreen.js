@@ -1,82 +1,123 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   ActivityIndicator,
-} from 'react-native';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
-import { useAlarms } from '../hooks/useAlarms';
-import { useAuth } from '../contexts/AuthContext';
-import { colors, radius, spacing } from '../utils/theme';
-import { formatTime12 } from '../utils/alarmUtils';
+} from "react-native";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  arrayUnion,
+} from "firebase/firestore";
+import { db } from "../utils/firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { colors, radius, spacing } from "../utils/theme";
 
-export default function InviteScreen({ route, navigation }) {
-  const { alarmId } = route.params || {};
+export default function InviteScreen({ navigation }) {
   const { user } = useAuth();
-  const { joinAlarm } = useAlarms();
-  const [alarm, setAlarm] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [joined, setJoined] = useState(false);
-
-  useEffect(() => {
-    if (!alarmId) return;
-    getDoc(doc(db, 'alarms', alarmId)).then((snap) => {
-      if (snap.exists()) setAlarm({ id: snap.id, ...snap.data() });
-      setLoading(false);
-    });
-  }, [alarmId]);
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState("idle");
+  const [alarmTitle, setAlarmTitle] = useState("");
 
   const handleJoin = async () => {
-    await joinAlarm(alarmId);
-    setJoined(true);
-    setTimeout(() => navigation.replace('Dashboard'), 1500);
+    if (!code.trim()) return;
+    setStatus("joining");
+    try {
+      const q = query(
+        collection(db, "alarms"),
+        where("inviteCode", "==", code.trim().toLowerCase()),
+      );
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        setStatus("notfound");
+        return;
+      }
+
+      const alarmDoc = snap.docs[0];
+      const data = alarmDoc.data();
+      setAlarmTitle(data.title);
+
+      if (data.members.includes(user.uid)) {
+        setStatus("existing");
+        return;
+      }
+
+      await updateDoc(doc(db, "alarms", alarmDoc.id), {
+        members: arrayUnion(user.uid),
+        memberDetails: arrayUnion({
+          uid: user.uid,
+          name: user.displayName,
+          photoURL: user.photoURL,
+        }),
+      });
+
+      setStatus("done");
+      setTimeout(() => navigation.replace("Dashboard"), 2000);
+    } catch (e) {
+      setStatus("error");
+    }
   };
 
-  if (loading) {
+  if (status === "done")
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} size="large" />
+        <Text style={styles.icon}>🎉</Text>
+        <Text style={styles.successText}>You're in!</Text>
+        <Text style={styles.hint}>You joined "{alarmTitle}". Redirecting…</Text>
       </View>
     );
-  }
-
-  if (!alarm) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Invite not found</Text>
-        <TouchableOpacity style={styles.btn} onPress={() => navigation.replace('Dashboard')}>
-          <Text style={styles.btnText}>Go back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (joined) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.successIcon}>🎉</Text>
-        <Text style={styles.successText}>Joined!</Text>
-        <Text style={styles.hint}>Going to your alarms…</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.inviteLabel}>You're invited to join</Text>
-        <Text style={styles.alarmTime}>{formatTime12(alarm.time)}</Text>
-        <Text style={styles.alarmTitle}>{alarm.title}</Text>
-        {alarm.description ? <Text style={styles.alarmDesc}>{alarm.description}</Text> : null}
-        <Text style={styles.by}>Created by {alarm.creatorName}</Text>
+        <Text style={styles.icon}>⏰</Text>
+        <Text style={styles.title}>Join an Alarm</Text>
+        <Text style={styles.subtitle}>
+          Enter the invite code shared by your team.
+        </Text>
 
-        <TouchableOpacity style={styles.joinBtn} onPress={handleJoin}>
-          <Text style={styles.joinText}>Join this alarm</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. hde-rfr-1234"
+          placeholderTextColor={colors.text3}
+          value={code}
+          onChangeText={setCode}
+          autoCapitalize="none"
+          returnKeyType="done"
+          onSubmitEditing={handleJoin}
+        />
+
+        {status === "notfound" && (
+          <Text style={styles.error}>❌ Code not found. Try again.</Text>
+        )}
+        {status === "existing" && (
+          <Text style={styles.warn}>✅ You're already a member.</Text>
+        )}
+        {status === "error" && (
+          <Text style={styles.error}>Something went wrong.</Text>
+        )}
+
+        <TouchableOpacity
+          style={styles.joinBtn}
+          onPress={handleJoin}
+          disabled={status === "joining"}
+        >
+          {status === "joining" ? (
+            <ActivityIndicator color={colors.bg} />
+          ) : (
+            <Text style={styles.joinText}>Join Alarm</Text>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.replace('Dashboard')}>
+
+        <TouchableOpacity onPress={() => navigation.replace("Dashboard")}>
           <Text style={styles.cancelText}>Not now</Text>
         </TouchableOpacity>
       </View>
@@ -88,14 +129,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: spacing.lg,
   },
   center: {
     flex: 1,
     backgroundColor: colors.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 16,
   },
   card: {
@@ -104,26 +145,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
+    gap: 12,
   },
-  inviteLabel: { fontSize: 13, color: colors.text3, marginBottom: spacing.md, textTransform: 'uppercase', letterSpacing: 0.8 },
-  alarmTime: { fontFamily: 'SpaceMono', fontSize: 42, fontWeight: '700', color: colors.accent, marginBottom: 4 },
-  alarmTitle: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 6 },
-  alarmDesc: { fontSize: 14, color: colors.text2, marginBottom: spacing.sm, textAlign: 'center' },
-  by: { fontSize: 12, color: colors.text3, marginBottom: spacing.lg },
+  icon: { fontSize: 48 },
+  title: { fontSize: 20, fontWeight: "700", color: colors.text },
+  subtitle: { fontSize: 13, color: colors.text2, textAlign: "center" },
+  input: {
+    width: "100%",
+    padding: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    color: colors.text,
+    fontSize: 15,
+  },
   joinBtn: {
+    width: "100%",
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    marginBottom: spacing.md,
+    padding: 14,
+    alignItems: "center",
   },
-  joinText: { fontSize: 16, fontWeight: '700', color: colors.bg },
-  cancelText: { fontSize: 14, color: colors.text3 },
-  btn: { backgroundColor: colors.surface2, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 24 },
-  btnText: { color: colors.text2, fontSize: 14 },
-  errorText: { fontSize: 18, color: colors.text2 },
-  successIcon: { fontSize: 56 },
-  successText: { fontSize: 24, fontWeight: '700', color: colors.text },
+  joinText: { fontWeight: "700", fontSize: 15, color: colors.bg },
+  cancelText: { fontSize: 14, color: colors.text3, paddingVertical: 4 },
+  error: { color: colors.danger, fontSize: 13 },
+  warn: { color: colors.success, fontSize: 13 },
+  successText: { fontSize: 24, fontWeight: "700", color: colors.text },
   hint: { fontSize: 14, color: colors.text3 },
 });

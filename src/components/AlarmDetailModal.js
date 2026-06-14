@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
+  Alert,
+} from "react-native";
 import {
   collection,
   addDoc,
@@ -20,26 +21,48 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../utils/firebase';
-import { colors, radius, spacing } from '../utils/theme';
-import { formatRepeat, formatTime12, getNextAlarmDate } from '../utils/alarmUtils';
-import { format, formatDistanceToNow } from 'date-fns';
+} from "firebase/firestore";
+import { db } from "../utils/firebase";
+import { colors, radius, spacing } from "../utils/theme";
+import {
+  formatRepeat,
+  formatTime12,
+  getNextAlarmDate,
+} from "../utils/alarmUtils";
+import { format, formatDistanceToNow } from "date-fns";
 
 const FIVE_MIN = 5 * 60 * 1000;
 
 export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
   const [comments, setComments] = useState([]);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
   const isManager = alarm.createdBy === currentUser?.uid;
   const nextDate = alarm.active ? getNextAlarmDate(alarm) : null;
 
+  const confirmDeleteComment = (commentId) => {
+    Alert.alert(
+      "Delete Comment",
+      "Are you sure you want to delete this comment?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteComment(commentId),
+        },
+      ],
+    );
+  };
+
   useEffect(() => {
     const q = query(
-      collection(db, 'alarms', alarm.id, 'comments'),
-      orderBy('createdAt', 'asc')
+      collection(db, "alarms", alarm.id, "comments"),
+      orderBy("createdAt", "asc"),
     );
     return onSnapshot(q, (snap) => {
       setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -49,14 +72,14 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
   const send = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
-    await addDoc(collection(db, 'alarms', alarm.id, 'comments'), {
+    await addDoc(collection(db, "alarms", alarm.id, "comments"), {
       text: text.trim(),
       uid: currentUser.uid,
       name: currentUser.displayName,
       photoURL: currentUser.photoURL,
       createdAt: serverTimestamp(),
     });
-    setText('');
+    setText("");
     setSending(false);
   };
 
@@ -67,7 +90,8 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
     return Date.now() - c.createdAt.toMillis() < FIVE_MIN;
   };
 
-  const deleteComment = (id) => deleteDoc(doc(db, 'alarms', alarm.id, 'comments', id));
+  const deleteComment = (id) =>
+    deleteDoc(doc(db, "alarms", alarm.id, "comments", id));
 
   const renderComment = ({ item: c }) => (
     <View style={styles.comment}>
@@ -82,10 +106,12 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
         <View style={styles.commentMeta}>
           <Text style={styles.commentName}>{c.name}</Text>
           <Text style={styles.commentTime}>
-            {c.createdAt ? formatDistanceToNow(c.createdAt.toDate(), { addSuffix: true }) : 'just now'}
+            {c.createdAt
+              ? formatDistanceToNow(c.createdAt.toDate(), { addSuffix: true })
+              : "just now"}
           </Text>
           {canDelete(c) && (
-            <TouchableOpacity onPress={() => deleteComment(c.id)}>
+            <TouchableOpacity onPress={() => confirmDeleteComment(c.id)}>
               <Text style={styles.deleteBtn}>✕</Text>
             </TouchableOpacity>
           )}
@@ -96,19 +122,29 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
   );
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             {alarm.creatorPhoto ? (
-              <Image source={{ uri: alarm.creatorPhoto }} style={styles.creatorPhoto} />
+              <Image
+                source={{ uri: alarm.creatorPhoto }}
+                style={styles.creatorPhoto}
+              />
             ) : (
               <View style={[styles.creatorPhoto, styles.avatarFallback]}>
-                <Text style={styles.fallbackText}>{alarm.creatorName?.[0]}</Text>
+                <Text style={styles.fallbackText}>
+                  {alarm.creatorName?.[0]}
+                </Text>
               </View>
             )}
             <View style={styles.headerInfo}>
@@ -131,7 +167,9 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
             <Text style={styles.repeatText}>{formatRepeat(alarm)}</Text>
           </View>
           {nextDate && (
-            <Text style={styles.nextText}>Next: {format(nextDate, 'EEE, MMM d')}</Text>
+            <Text style={styles.nextText}>
+              Next: {format(nextDate, "EEE, MMM d")}
+            </Text>
           )}
         </View>
 
@@ -142,7 +180,10 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
             {alarm.memberDetails.map((m) => (
               <View key={m.uid} style={styles.member}>
                 {m.photoURL ? (
-                  <Image source={{ uri: m.photoURL }} style={styles.memberAvatar} />
+                  <Image
+                    source={{ uri: m.photoURL }}
+                    style={styles.memberAvatar}
+                  />
                 ) : (
                   <View style={[styles.memberAvatar, styles.avatarFallback]}>
                     <Text style={styles.fallbackText}>{m.name?.[0]}</Text>
@@ -179,10 +220,15 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
         {/* Input */}
         <View style={styles.inputRow}>
           {currentUser?.photoURL ? (
-            <Image source={{ uri: currentUser.photoURL }} style={styles.inputAvatar} />
+            <Image
+              source={{ uri: currentUser.photoURL }}
+              style={styles.inputAvatar}
+            />
           ) : (
             <View style={[styles.inputAvatar, styles.avatarFallback]}>
-              <Text style={styles.fallbackText}>{currentUser?.displayName?.[0]}</Text>
+              <Text style={styles.fallbackText}>
+                {currentUser?.displayName?.[0]}
+              </Text>
             </View>
           )}
           <TextInput
@@ -196,7 +242,10 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
             returnKeyType="send"
           />
           <TouchableOpacity
-            style={[styles.sendBtn, (!text.trim() || sending) && styles.sendDisabled]}
+            style={[
+              styles.sendBtn,
+              (!text.trim() || sending) && styles.sendDisabled,
+            ]}
             onPress={send}
             disabled={!text.trim() || sending}
           >
@@ -211,18 +260,34 @@ export default function AlarmDetailModal({ alarm, currentUser, onClose }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     padding: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerLeft: { flexDirection: 'row', gap: 12, flex: 1 },
-  creatorPhoto: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  headerLeft: { flexDirection: "row", gap: 12, flex: 1 },
+  creatorPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   headerInfo: { flex: 1 },
-  alarmTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 2 },
-  alarmDesc: { fontSize: 13, color: colors.text2, marginBottom: 3, lineHeight: 18 },
+  alarmTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 2,
+  },
+  alarmDesc: {
+    fontSize: 13,
+    color: colors.text2,
+    marginBottom: 3,
+    lineHeight: 18,
+  },
   creatorBy: { fontSize: 12, color: colors.text3 },
   closeBtn: {
     padding: 6,
@@ -230,24 +295,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     width: 28,
     height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   closeText: { fontSize: 12, color: colors.text2 },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   detailTime: {
-    fontFamily: 'SpaceMono',
+    fontFamily: "SpaceMono",
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.accent,
   },
   repeatBadge: {
@@ -258,44 +323,72 @@ const styles = StyleSheet.create({
   },
   repeatText: { fontSize: 12, color: colors.text2 },
   nextText: { fontSize: 12, color: colors.text3 },
-  section: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 },
+  section: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: 4,
+  },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 8,
   },
-  member: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  member: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
   memberAvatar: { width: 30, height: 30, borderRadius: 15 },
   memberName: { fontSize: 14, color: colors.text, flex: 1 },
   managerBadge: {
-    backgroundColor: colors.accent + '22',
+    backgroundColor: colors.accent + "22",
     borderRadius: radius.sm,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  managerText: { fontSize: 10, color: colors.accent, fontWeight: '700', textTransform: 'uppercase' },
+  managerText: {
+    fontSize: 10,
+    color: colors.accent,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
   divider: { height: 1, backgroundColor: colors.border, marginTop: spacing.sm },
   commentsList: { flex: 1 },
-  noComments: { fontSize: 13, color: colors.text3, textAlign: 'center', paddingVertical: 24 },
-  comment: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  noComments: {
+    fontSize: 13,
+    color: colors.text3,
+    textAlign: "center",
+    paddingVertical: 24,
+  },
+  comment: { flexDirection: "row", gap: 10, marginBottom: 14 },
   commentAvatar: { width: 28, height: 28, borderRadius: 14 },
-  avatarFallback: { backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
-  fallbackText: { fontSize: 12, color: colors.accent, fontWeight: '700' },
+  avatarFallback: {
+    backgroundColor: colors.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fallbackText: { fontSize: 12, color: colors.accent, fontWeight: "700" },
   commentBody: { flex: 1 },
-  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  commentName: { fontSize: 13, fontWeight: '600', color: colors.text },
+  commentMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 3,
+  },
+  commentName: { fontSize: 13, fontWeight: "600", color: colors.text },
   commentTime: { fontSize: 11, color: colors.text3, flex: 1 },
   deleteBtn: { fontSize: 11, color: colors.danger, paddingHorizontal: 4 },
   commentText: { fontSize: 14, color: colors.text2, lineHeight: 20 },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     gap: 10,
     padding: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? 32 : spacing.md,
+    paddingBottom: Platform.OS === "ios" ? 32 : spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
@@ -318,9 +411,9 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   sendDisabled: { opacity: 0.4 },
-  sendIcon: { fontSize: 16, color: colors.bg, fontWeight: '700' },
+  sendIcon: { fontSize: 16, color: colors.bg, fontWeight: "700" },
 });

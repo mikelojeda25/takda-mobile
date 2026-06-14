@@ -16,15 +16,6 @@ import AlarmRingScreen from "../screens/AlarmRingScreen";
 
 const Stack = createStackNavigator();
 
-const linking = {
-  prefixes: ["takda://"],
-  config: {
-    screens: {
-      Invite: "invite/:alarmId",
-    },
-  },
-};
-
 export default function AppNavigator() {
   const { user, loading } = useAuth();
   const [ringingAlarm, setRingingAlarm] = useState(null);
@@ -93,7 +84,7 @@ export default function AppNavigator() {
 
   return (
     <>
-      <NavigationContainer linking={linking}>
+      <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {!user ? (
             <Stack.Screen name="Login" component={LoginScreen} />

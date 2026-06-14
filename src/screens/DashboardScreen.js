@@ -32,8 +32,8 @@ export default function DashboardScreen({ navigation }) {
   const [detailAlarm, setDetailAlarm] = useState(null);
 
   const filtered = alarms.filter((a) => {
-    if (filter === "mine") return a.createdBy === user?.uid;
-    if (filter === "team") return a.createdBy !== user?.uid;
+    if (filter === "mine") return a.createdBy === user.uid;
+    if (filter === "team") return a.members?.length > 1; // ← more than 1 member
     return true;
   });
 
@@ -93,6 +93,13 @@ export default function DashboardScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
           ))}
+
+          <TouchableOpacity
+            style={styles.joinBtn}
+            onPress={() => navigation.navigate("Invite")}
+          >
+            <Text style={styles.joinBtnText}>Join Alarm</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Alarm count */}
@@ -197,6 +204,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
     marginBottom: spacing.sm,
+    alignItems: "center",
   },
   filterBtn: {
     paddingHorizontal: spacing.md,
@@ -209,6 +217,16 @@ const styles = StyleSheet.create({
   filterActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   filterText: { fontSize: 13, color: colors.text2, fontWeight: "500" },
   filterTextActive: { color: colors.bg, fontWeight: "700" },
+  joinBtn: {
+    marginLeft: "auto",
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  joinBtnText: { fontSize: 13, color: colors.text2, fontWeight: "500" },
   count: {
     fontSize: 12,
     color: colors.text3,
