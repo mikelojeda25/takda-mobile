@@ -9,6 +9,7 @@
     "build:android": "eas build --platform android --profile preview"
   },
   "dependencies": {
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "8.0.1",
     "@react-native-google-signin/google-signin": "^13.1.0",
@@ -16,10 +17,12 @@
     "@react-navigation/stack": "^6.4.1",
     "date-fns": "^3.6.0",
     "expo": "~51.0.28",
+    "expo-background-fetch": "~12.0.1",
     "expo-device": "~6.0.2",
     "expo-linking": "~6.3.1",
     "expo-notifications": "~0.28.19",
     "expo-status-bar": "~1.12.1",
+    "expo-task-manager": "~11.8.2",
     "firebase": "^10.12.5",
     "react": "18.2.0",
     "react-native": "0.74.5",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   collection,
   onSnapshot,
@@ -11,134 +11,153 @@ import {
   where,
   arrayUnion,
   setDoc,
-} from 'firebase/firestore';
-import { db } from '../utils/firebase';
-import { useAuth } from '../contexts/AuthContext';
-import { getNextAlarmDate } from '../utils/alarmUtils';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+} from "firebase/firestore";
+import { db } from "../utils/firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { getNextAlarmDate } from "../utils/alarmUtils";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+import notifee, {
+  TriggerType,
+  AndroidImportance,
+  AndroidVisibility,
+  EventType,
+} from "@notifee/react-native";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+// Handle background events
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (type === EventType.ACTION_PRESS || type === EventType.PRESS) {
+    await notifee.cancelNotification(detail.notification.id);
+  }
 });
 
-async function registerForPushNotificationsAsync() {
-  if (!Device.isDevice) return null;
-
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') return null;
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('alarm', {
-      name: 'Takda Alarms',
-      importance: Notifications.AndroidImportance.MAX,
-      sound: 'default',
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#fcda80',
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      bypassDnd: true,
-    });
-  }
-
-  const token = (await Notifications.getExpoPushTokenAsync({
-    projectId: '2d3a7684-6102-4f91-934f-88d3032ffd30',
-  })).data;
-
-  return token;
+async function createNotifeeChannel() {
+  await notifee.createChannel({
+    id: "takda-alarm",
+    name: "Takda Alarms",
+    importance: AndroidImportance.HIGH,
+    visibility: AndroidVisibility.PUBLIC,
+    sound: "default",
+    vibration: true,
+    vibrationPattern: [300, 500, 300, 500],
+    bypassDnd: true,
+    lights: true,
+    lightColor: "#fcda80",
+  });
 }
 
-async function scheduleAlarmNotification(alarm) {
-  await Notifications.cancelScheduledNotificationAsync(alarm.id).catch(() => {});
+async function scheduleAlarmWithNotifee(alarm) {
+  // Cancel existing
+  try {
+    await notifee.cancelTriggerNotification(alarm.id);
+  } catch {}
+
   if (!alarm.active) return;
 
   const next = getNextAlarmDate(alarm);
-  if (!next) return;
+  if (!next || next < new Date()) return;
 
-  await Notifications.scheduleNotificationAsync({
-    identifier: alarm.id,
-    content: {
+  await notifee.createTriggerNotification(
+    {
+      id: alarm.id,
       title: `⏰ ${alarm.title}`,
-      body: alarm.description || 'Your alarm is ringing!',
-      sound: 'default',
-      priority: Notifications.AndroidNotificationPriority.MAX,
+      body: alarm.description || "Your alarm is ringing!",
+      android: {
+        channelId: "takda-alarm",
+        importance: AndroidImportance.HIGH,
+        visibility: AndroidVisibility.PUBLIC,
+        sound: "default",
+        vibrationPattern: [300, 500, 300, 500],
+        pressAction: { id: "default" },
+        fullScreenAction: {
+          id: "default",
+        },
+        showTimestamp: true,
+        timestamp: next.getTime(),
+        color: "#fcda80",
+      },
       data: { alarmId: alarm.id },
-      channelId: 'alarm',
     },
-    trigger: {
-      date: next,
-      channelId: 'alarm',
+    {
+      type: TriggerType.TIMESTAMP,
+      timestamp: next.getTime(),
+      alarmManager: {
+        allowWhileIdle: true,
+      },
     },
-  });
+  );
+}
+
+async function registerForPushNotificationsAsync() {
+  if (!Device.isDevice) return null;
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") return null;
+  const token = (
+    await Notifications.getExpoPushTokenAsync({
+      projectId: "2d3a7684-6102-4f91-934f-88d3032ffd30",
+    })
+  ).data;
+  return token;
 }
 
 export function useAlarms(onRing) {
   const { user } = useAuth();
   const [alarms, setAlarms] = useState([]);
 
-  // Register push token and save to Firestore
+  // Setup Notifee channel + permissions
+  useEffect(() => {
+    (async () => {
+      await createNotifeeChannel();
+      await notifee.requestPermission();
+    })();
+  }, []);
+
+  // Save push token
   useEffect(() => {
     if (!user) return;
     (async () => {
       const token = await registerForPushNotificationsAsync();
       if (token) {
-        await setDoc(doc(db, 'userTokens', user.uid), {
-          expoPushToken: token,
-          uid: user.uid,
-          name: user.displayName,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
+        await setDoc(
+          doc(db, "userTokens", user.uid),
+          {
+            expoPushToken: token,
+            uid: user.uid,
+            name: user.displayName,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
       }
     })();
   }, [user]);
 
-  // Listen for notification responses (when user taps notification)
+  // Foreground event listener
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const alarmId = response.notification.request.content.data?.alarmId;
-      if (alarmId && onRing) {
+    const unsub = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.DELIVERED && detail.notification?.data?.alarmId) {
+        const alarmId = detail.notification.data.alarmId;
         const alarm = alarms.find((a) => a.id === alarmId);
-        if (alarm) onRing(alarm);
+        if (alarm && onRing) onRing(alarm);
       }
     });
-    return () => sub.remove();
+    return unsub;
   }, [alarms]);
 
-  // Listen for foreground notifications
-  useEffect(() => {
-    const sub = Notifications.addNotificationReceivedListener((notification) => {
-      const alarmId = notification.request.content.data?.alarmId;
-      if (alarmId && onRing) {
-        const alarm = alarms.find((a) => a.id === alarmId);
-        if (alarm) onRing(alarm);
-      }
-    });
-    return () => sub.remove();
-  }, [alarms]);
-
+  // Listen to Firestore alarms
   useEffect(() => {
     if (!user) return;
 
     const q = query(
-      collection(db, 'alarms'),
-      where('members', 'array-contains', user.uid)
+      collection(db, "alarms"),
+      where("members", "array-contains", user.uid),
     );
 
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAlarms(list);
-      list.forEach((alarm) => scheduleAlarmNotification(alarm));
+      list.forEach((alarm) => scheduleAlarmWithNotifee(alarm));
     });
 
     return unsub;
@@ -146,17 +165,19 @@ export function useAlarms(onRing) {
 
   const createAlarm = async (form) => {
     if (!user) return;
-    const docRef = await addDoc(collection(db, 'alarms'), {
+    const docRef = await addDoc(collection(db, "alarms"), {
       ...form,
       createdBy: user.uid,
       creatorName: user.displayName,
       creatorPhoto: user.photoURL,
       members: [user.uid],
-      memberDetails: [{
-        uid: user.uid,
-        name: user.displayName,
-        photoURL: user.photoURL,
-      }],
+      memberDetails: [
+        {
+          uid: user.uid,
+          name: user.displayName,
+          photoURL: user.photoURL,
+        },
+      ],
       active: true,
       createdAt: serverTimestamp(),
     });
@@ -164,21 +185,23 @@ export function useAlarms(onRing) {
   };
 
   const updateAlarm = async (id, form) => {
-    await updateDoc(doc(db, 'alarms', id), form);
+    await updateDoc(doc(db, "alarms", id), form);
   };
 
   const deleteAlarm = async (id) => {
-    await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
-    await deleteDoc(doc(db, 'alarms', id));
+    try {
+      await notifee.cancelTriggerNotification(id);
+    } catch {}
+    await deleteDoc(doc(db, "alarms", id));
   };
 
   const toggleAlarm = async (id, current) => {
-    await updateDoc(doc(db, 'alarms', id), { active: !current });
+    await updateDoc(doc(db, "alarms", id), { active: !current });
   };
 
   const joinAlarm = async (alarmId) => {
     if (!user) return;
-    await updateDoc(doc(db, 'alarms', alarmId), {
+    await updateDoc(doc(db, "alarms", alarmId), {
       members: arrayUnion(user.uid),
       memberDetails: arrayUnion({
         uid: user.uid,
@@ -188,5 +211,12 @@ export function useAlarms(onRing) {
     });
   };
 
-  return { alarms, createAlarm, updateAlarm, deleteAlarm, toggleAlarm, joinAlarm };
+  return {
+    alarms,
+    createAlarm,
+    updateAlarm,
+    deleteAlarm,
+    toggleAlarm,
+    joinAlarm,
+  };
 }
