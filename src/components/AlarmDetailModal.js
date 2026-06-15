@@ -195,7 +195,14 @@ export default function AlarmDetailModal({
               </View>
             )}
             <View style={styles.headerInfo}>
-              <Text style={styles.alarmTitle}>{liveAlarm.title}</Text>
+              <Text
+                style={[
+                  styles.alarmTitle,
+                  { fontSize: liveAlarm.title.length > 10 ? 30 : 40 },
+                ]}
+              >
+                {liveAlarm.title}
+              </Text>
               {liveAlarm.description ? (
                 <Text style={styles.alarmDesc}>{liveAlarm.description}</Text>
               ) : null}
@@ -228,7 +235,7 @@ export default function AlarmDetailModal({
               onPress={() => onEdit(liveAlarm)}
               activeOpacity={0.7}
             >
-              <Text style={styles.editBtnText}>✏️ Edit Alarm</Text>
+              <Text style={styles.editBtnText}>Edit Alarm</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -371,7 +378,8 @@ const styles = StyleSheet.create({
   },
   headerInfo: { flex: 1, justifyContent: "center" },
   alarmTitle: {
-    fontSize: 18,
+    fontSize: 30,
+    textTransform: "uppercase",
     fontWeight: "800",
     color: colors.text,
     marginBottom: 4,
@@ -588,7 +596,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   fullWidthEditBtn: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.accent,
     paddingVertical: 12,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -604,7 +612,7 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.text,
+    color: "#000000",
     letterSpacing: 0.5,
   },
 });

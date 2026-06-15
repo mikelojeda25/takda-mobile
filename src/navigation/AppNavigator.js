@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { useAuth } from "../contexts/AuthContext";
-import { ActivityIndicator, View } from "react-native";
-import { colors } from "../utils/theme";
+
 import notifee from "@notifee/react-native";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../utils/firebase";
@@ -17,7 +16,7 @@ import AlarmRingScreen from "../screens/AlarmRingScreen";
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { user, loading } = useAuth();
+  const { user, authLoading } = useAuth();
   const [ringingAlarm, setRingingAlarm] = useState(null);
   const ringingRef = useRef(null);
 
@@ -67,20 +66,7 @@ export default function AppNavigator() {
     return unsub;
   }, []);
 
-  if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <ActivityIndicator color={colors.accent} size="large" />
-      </View>
-    );
-  }
+  if (authLoading) return null;
 
   return (
     <>

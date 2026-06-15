@@ -32,19 +32,21 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   }
 });
 
-async function createNotifeeChannel() {
+async function getOrCreateChannel(soundName = "alarm_sound") {
+  const channelId = `channel-${soundName}`;
   await notifee.createChannel({
-    id: "takda-alarm-v3",
+    id: channelId,
     name: "Takda Alarms",
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: "alarm_sound",
+    sound: soundName,
     vibration: true,
     vibrationPattern: [500, 500, 500, 500],
     bypassDnd: true,
     lights: true,
     lightColor: "#fcda80",
   });
+  return channelId;
 }
 
 async function scheduleAlarmWithNotifee(alarm) {
@@ -55,23 +57,21 @@ async function scheduleAlarmWithNotifee(alarm) {
   if (!alarm.active) return;
 
   const next = getNextAlarmDate(alarm);
-  console.log("SCHEDULING:", alarm.title, "next:", next, "now:", new Date());
-  if (!next || next < new Date()) {
-    console.log("SKIPPED - time passed or null");
-    return;
-  }
+  if (!next || next < new Date()) return;
 
-  console.log("CREATING TRIGGER for:", alarm.title, "at:", next);
+  const soundToUse = alarm.sound || "alarm_sound";
+  const channelId = await getOrCreateChannel(soundToUse);
+
   await notifee.createTriggerNotification(
     {
       id: alarm.id,
       title: `⏰ ${alarm.title}`,
       body: alarm.description || "Your alarm is ringing!",
       android: {
-        channelId: "takda-alarm-v3",
+        channelId: channelId,
         importance: AndroidImportance.HIGH,
         visibility: AndroidVisibility.PUBLIC,
-        sound: "alarm_sound",
+        sound: soundToUse,
         category: AndroidCategory.ALARM,
         pressAction: { id: "default", launchActivity: "default" },
         fullScreenAction: { id: "default", launchActivity: "default" },
@@ -107,10 +107,13 @@ async function registerForPushNotificationsAsync() {
 export function useAlarms() {
   const { user } = useAuth();
   const [alarms, setAlarms] = useState([]);
+  const [alarmsLoading, setAlarmsLoading] = useState(true);
 
+  // FIX: was calling createNotifeeChannel() which doesn't exist
+  // replaced with getOrCreateChannel() using the default sound
   useEffect(() => {
     (async () => {
-      await createNotifeeChannel();
+      await getOrCreateChannel("alarm_sound");
       await notifee.requestPermission();
     })();
   }, []);
@@ -135,17 +138,29 @@ export function useAlarms() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setAlarmsLoading(false);
+      return;
+    }
+
+    setAlarmsLoading(true);
+
     const q = query(
       collection(db, "alarms"),
       where("members", "array-contains", user.uid),
     );
+
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAlarms(list);
+      setAlarmsLoading(false);
       list.forEach((alarm) => scheduleAlarmWithNotifee(alarm));
     });
-    return unsub;
+
+    return () => {
+      unsub();
+      setAlarmsLoading(true);
+    };
   }, [user]);
 
   const createAlarm = async (form) => {
@@ -194,6 +209,7 @@ export function useAlarms() {
 
   return {
     alarms,
+    alarmsLoading,
     createAlarm,
     updateAlarm,
     deleteAlarm,

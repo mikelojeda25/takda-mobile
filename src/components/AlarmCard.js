@@ -22,6 +22,7 @@ export default function AlarmCard({
   onEdit,
   onDelete,
   onPress,
+  onInvite,
 }) {
   const isOwner = alarm.createdBy === currentUser?.uid;
   const nextDate = alarm.active ? getNextAlarmDate(alarm) : null;
@@ -72,40 +73,40 @@ export default function AlarmCard({
           trackColor={{ false: colors.surface3, true: colors.accent + "60" }}
           thumbColor={alarm.active ? colors.accent : colors.text3}
         />
-        {isOwner && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onEdit(alarm);
-              }}
-            >
-              <Text style={styles.actionIcon}>✏️</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.dangerBtn]}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                Alert.alert(
-                  "Delete Alarm",
-                  `Are you sure you want to delete "${alarm.title}"?`,
-                  [
+
+        {isOwner ? (
+          <View style={styles.actionsWrapper}>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => onInvite(alarm)}
+              >
+                <Text style={styles.actionIcon}>📤</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => onEdit(alarm)}
+              >
+                <Text style={styles.actionIcon}>✏️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.dangerBtn]}
+                onPress={() =>
+                  Alert.alert("Delete", "Delete alarm?", [
                     { text: "Cancel", style: "cancel" },
                     {
                       text: "Delete",
                       style: "destructive",
                       onPress: () => onDelete(alarm.id),
                     },
-                  ],
-                );
-              }}
-            >
-              <Text style={styles.actionIcon}>🗑</Text>
-            </TouchableOpacity>
+                  ])
+                }
+              >
+                <Text style={styles.actionIcon}>🗑</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-        {!isOwner && (
+        ) : (
           <Text style={styles.byText}>
             by {alarm.creatorName?.split(" ")[0]}
           </Text>
@@ -124,8 +125,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "stretch", // Ginawang stretch para mag-pantay ang height
   },
   cardInactive: { opacity: 0.55 },
   left: { flex: 1, marginRight: spacing.sm },
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginBottom: 3,
+    textTransform: "uppercase",
   },
   desc: { fontSize: 13, color: colors.text3, marginBottom: 6 },
   dimmed: { color: colors.text3 },
@@ -174,8 +175,17 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  right: { alignItems: "flex-end", gap: 8 },
-  actions: { flexDirection: "row", gap: 4 },
+  right: {
+    alignItems: "flex-end",
+    justifyContent: "space-between", // Dito naghihiwalay ang Switch at Icons
+  },
+  actionsWrapper: {
+    marginTop: 10,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 4,
+  },
   actionBtn: {
     padding: 6,
     borderRadius: radius.sm,

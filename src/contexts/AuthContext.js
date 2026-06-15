@@ -1,22 +1,31 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../utils/firebase';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { auth } from "../utils/firebase";
 
 const AuthContext = createContext(null);
 
 GoogleSignin.configure({
-  webClientId: '1001772889118-64v1kr0evv7chgq4ib8vt27r0j5iprsr.apps.googleusercontent.com',
+  webClientId:
+    "1001772889118-64v1kr0evv7chgq4ib8vt27r0j5iprsr.apps.googleusercontent.com",
 });
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      setLoading(false);
+      setAuthLoading(false);
     });
     return unsub;
   }, []);
@@ -29,7 +38,7 @@ export function AuthProvider({ children }) {
       await signInWithCredential(auth, credential);
     } catch (err) {
       if (err.code !== statusCodes.SIGN_IN_CANCELLED) {
-        console.error('Login error:', err);
+        console.error("Login error:", err);
       }
     }
   };
@@ -39,12 +48,12 @@ export function AuthProvider({ children }) {
       await GoogleSignin.signOut();
       await signOut(auth);
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, authLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

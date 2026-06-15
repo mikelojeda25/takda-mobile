@@ -1,13 +1,16 @@
 import { registerRootComponent } from "expo";
-import { AuthProvider } from "./src/contexts/AuthContext";
-import AppNavigator from "./src/navigation/AppNavigator";
 import React from "react";
+import { AuthProvider } from "./src/contexts/AuthContext";
+import { LoaderProvider } from "./src/components/LoaderContext";
+import AppNavigator from "./src/navigation/AppNavigator";
 
 function App() {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <LoaderProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </LoaderProvider>
   );
 }
 

@@ -1,66 +1,80 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
-  Share,
+  Modal,
+  TouchableWithoutFeedback,
   Clipboard,
-  ToastAndroid,
-  Platform,
+  Alert,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "../utils/theme";
 
-export default function InviteModal({ alarm, onClose }) {
-  const code = alarm.inviteCode || "—";
-
-  const handleShare = async () => {
-    await Share.share({
-      message: `Join my alarm "${alarm.title}" on Takda!\n\nInvite code: ${code}`,
-      title: "Join Takda alarm",
-    });
-  };
+export default function InviteModal({ visible, alarm, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const code = alarm.inviteCode || alarm.id || "—";
+  console.log(Clipboard);
 
   const handleCopy = () => {
-    Clipboard.setString(code);
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Code copied!", ToastAndroid.SHORT);
+    // 1. Subukan ang legacy method
+    try {
+      Clipboard.setString(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      // 2. Kung mag-fail, ipakita na lang sa Alert
+      Alert.alert("Copy Code", `Copy this CODE: ${code}`);
     }
-    onClose();
   };
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <TouchableOpacity style={styles.sheet} activeOpacity={1}>
-          <Text style={styles.title}>Invite teammates</Text>
-          <Text style={styles.subtitle}>
-            Share this code — they enter it in the app to join{"\n"}"
-            {alarm.title}".
-          </Text>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.card}>
+              <View style={styles.header}>
+                <Text style={styles.title}>Invite Team</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
 
-          <View style={styles.linkBox}>
-            <Text style={styles.linkText}>{code}</Text>
-          </View>
+              <Text style={styles.desc}>
+                Share this code with your team to join{" "}
+                <Text style={styles.bold}>"{alarm.title}"</Text>.
+              </Text>
 
-          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-            <Text style={styles.shareBtnText}>Share code</Text>
-          </TouchableOpacity>
+              <View style={styles.codeContainer}>
+                <Text style={styles.codeText}>{code}</Text>
+                <TouchableOpacity
+                  style={[styles.copyBtn, copied && styles.copiedBtn]}
+                  onPress={handleCopy}
+                >
+                  <Text style={styles.copyBtnText}>
+                    {copied ? "Copied!" : "Copy"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-          <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
-            <Text style={styles.copyBtnText}>Copy code</Text>
-          </TouchableOpacity>
+              <Text style={styles.note}>
+                💡 They can use this code to join automatically.
+              </Text>
 
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </TouchableOpacity>
+              <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
+                <Text style={styles.doneBtnText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -68,53 +82,70 @@ export default function InviteModal({ alarm, onClose }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.md,
     backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
   },
-  sheet: {
+  card: {
+    width: "100%",
+    maxWidth: 400,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
-    margin: spacing.md,
-    marginBottom: spacing.xl,
-    alignItems: "center",
-    gap: 12,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
-  title: { fontSize: 17, fontWeight: "700", color: colors.text },
-  subtitle: {
-    fontSize: 13,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  title: { fontSize: 20, fontWeight: "700", color: colors.text },
+  closeBtn: { padding: 4 },
+  desc: {
+    fontSize: 14,
     color: colors.text2,
-    textAlign: "center",
+    marginBottom: spacing.lg,
     lineHeight: 20,
   },
-  linkBox: {
-    width: "100%",
+  bold: { fontWeight: "600", color: colors.text },
+  codeContainer: {
     backgroundColor: colors.surface2,
+    padding: spacing.md,
     borderRadius: radius.md,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 12,
+    marginBottom: spacing.md,
   },
-  linkText: { fontSize: 13, color: colors.text3, fontFamily: "SpaceMono" },
-  shareBtn: {
-    width: "100%",
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-    padding: 14,
-    alignItems: "center",
+  codeText: {
+    fontFamily: "SpaceMono",
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text,
+    letterSpacing: 2,
   },
-  shareBtnText: { fontSize: 15, fontWeight: "700", color: colors.bg },
   copyBtn: {
-    width: "100%",
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
   },
-  copyBtnText: { fontSize: 15, color: colors.text2 },
-  cancelText: { fontSize: 14, color: colors.text3, paddingVertical: 4 },
+  copiedBtn: { backgroundColor: colors.success || "#2ecc71" },
+  copyBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  note: { fontSize: 12, color: colors.text3, marginBottom: spacing.lg },
+  doneBtn: {
+    backgroundColor: colors.surface3,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    alignItems: "center",
+  },
+  doneBtnText: { fontWeight: "600", color: colors.text },
 });

@@ -1,13 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Easing,
-  Image,
-} from 'react-native';
-import { colors } from '../utils/theme';
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated, Easing, Image } from "react-native";
+import { colors } from "../utils/theme";
 
 export default function LoaderScreen() {
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -17,7 +10,6 @@ export default function LoaderScreen() {
   const glow = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Logo fade + scale in
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1,
@@ -32,7 +24,6 @@ export default function LoaderScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Text slide up after logo
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
@@ -47,7 +38,6 @@ export default function LoaderScreen() {
         }),
       ]).start();
 
-      // Glow pulse loop
       Animated.loop(
         Animated.sequence([
           Animated.timing(glow, {
@@ -62,7 +52,7 @@ export default function LoaderScreen() {
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     });
   }, []);
@@ -80,7 +70,7 @@ export default function LoaderScreen() {
       >
         <Animated.View style={{ transform: [{ scale: glow }] }}>
           <Image
-            source={require('../../assets/icon.png')}
+            source={require("../../assets/icon.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -91,12 +81,14 @@ export default function LoaderScreen() {
         style={{
           opacity: textOpacity,
           transform: [{ translateY: textY }],
-          alignItems: 'center',
+          alignItems: "center",
         }}
       >
         <Text style={styles.title}>TAKDA</Text>
-        <Text style={styles.sub}>team alarms, synced.</Text>
+        <Text style={styles.sub}> One Mind - One Goal -One Time</Text>
       </Animated.View>
+
+      <Text style={styles.powered}>JOSEPH DEV</Text>
     </View>
   );
 }
@@ -105,13 +97,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 24,
   },
   logoWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logo: {
     width: 120,
@@ -119,15 +111,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.accent,
     letterSpacing: 6,
-    fontFamily: 'SpaceMono',
+    fontFamily: "SpaceMono",
   },
   sub: {
     fontSize: 13,
-    color: colors.text3,
+    color: colors.text2,
     letterSpacing: 1,
     marginTop: 6,
+  },
+  powered: {
+    position: "absolute",
+    bottom: 120,
+    color: "#22c55e", // green (clean Tailwind green)
+    fontSize: 15,
+    letterSpacing: 1,
+    fontWeight: "600",
+    opacity: 0.5,
   },
 });
