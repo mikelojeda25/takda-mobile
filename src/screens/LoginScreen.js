@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -7,12 +7,12 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
-} from 'react-native';
-import { colors, radius, spacing } from '../utils/theme';
-import { useAuth } from '../contexts/AuthContext';
+} from "react-native";
+import { colors, radius, spacing } from "../utils/theme";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginScreen() {
-  const { login, loading } = useAuth();
+  const { login } = useAuth();
   const [signing, setSigning] = React.useState(false);
 
   const handleLogin = async () => {
@@ -27,14 +27,18 @@ export default function LoginScreen() {
 
       <View style={styles.logoSection}>
         <View style={styles.iconWrap}>
-          <Text style={styles.iconEmoji}>⏰</Text>
+          <Image
+            source={require("../../assets/icon.png")}
+            style={styles.iconImage}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.title}>TAKDA</Text>
         <Text style={styles.sub}>by Michael Joseph Ojeda</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.headline}>Team alarms,{'\n'}perfectly synced.</Text>
+        <Text style={styles.headline}>MIND. GOAL. TIME.</Text>
         <Text style={styles.hint}>
           Set an alarm once — your whole team wakes up together.
         </Text>
@@ -49,9 +53,13 @@ export default function LoginScreen() {
             <ActivityIndicator color={colors.bg} size="small" />
           ) : (
             <>
-              <View style={styles.googleIcon}>
-                <Text style={styles.googleG}>G</Text>
-              </View>
+              <Image
+                source={{
+                  uri: "https://developers.google.com/identity/images/g-logo.png",
+                }}
+                style={styles.googleIcon}
+                resizeMode="contain"
+              />
               <Text style={styles.googleText}>Continue with Google</Text>
             </>
           )}
@@ -69,31 +77,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: spacing.lg,
   },
   logoSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.xl * 1.5,
   },
   iconWrap: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
     borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.md,
+    overflow: "hidden",
   },
-  iconEmoji: {
-    fontSize: 36,
+  iconImage: {
+    width: 72,
+    height: 72,
   },
   title: {
-    fontFamily: 'SpaceMono',
+    fontFamily: "SpaceMono",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.accent,
     letterSpacing: 4,
   },
@@ -112,7 +122,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
     lineHeight: 30,
     marginBottom: spacing.sm,
@@ -124,9 +134,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.accent,
     borderRadius: radius.md,
     paddingVertical: 14,
@@ -136,25 +146,18 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 22,
     height: 22,
+    backgroundColor: "#fff",
     borderRadius: 11,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleG: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4285F4',
   },
   googleText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.bg,
   },
   legal: {
     fontSize: 11,
     color: colors.text3,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 16,
   },
 });

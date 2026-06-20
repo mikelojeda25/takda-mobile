@@ -12,6 +12,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors, radius, spacing } from "../utils/theme";
+import { Audio } from "expo-av";
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABELS = {
@@ -26,12 +27,28 @@ const DAY_LABELS = {
 
 const SOUNDS = [
   { file: "alarm_sound", label: "Default Alarm" },
-  { file: "Clock_In_Darfred", label: "Clock In" },
-  { file: "Clock_Out_Darfred", label: "Clock Out" },
+  { file: "clock_in_darfred", label: "Clock In" },
+  { file: "clock_out_darfred", label: "Clock Out" },
+  { file: "dawn", label: "Dawn" },
+  { file: "classic", label: "Classic" },
+  { file: "savour", label: "Savour" },
+  { file: "astute", label: "Astute" },
+  { file: "poignant", label: "Poignant" },
 ];
 
 const getSoundLabel = (file) =>
   SOUNDS.find((s) => s.file === file)?.label ?? file;
+
+const SOUND_FILES = {
+  alarm_sound: require("../../assets/sounds/alarm_sound.mp3"),
+  clock_in_darfred: require("../../assets/sounds/clock_in_darfred.mp3"),
+  clock_out_darfred: require("../../assets/sounds/clock_out_darfred.mp3"),
+  dawn: require("../../assets/sounds/dawn.mp3"),
+  classic: require("../../assets/sounds/classic.mp3"),
+  savour: require("../../assets/sounds/savour.mp3"),
+  astute: require("../../assets/sounds/astute.mp3"),
+  poignant: require("../../assets/sounds/poignant.mp3"),
+};
 
 const defaultForm = {
   title: "",
@@ -44,6 +61,21 @@ const defaultForm = {
 
 function SoundPickerModal({ current, onSelect, onClose }) {
   const [preview, setPreview] = useState(current);
+  const [playingSound, setPlayingSound] = useState(null);
+
+  const playPreview = async (file) => {
+    try {
+      if (playingSound) {
+        await playingSound.stopAsync();
+        await playingSound.unloadAsync();
+      }
+      const { sound } = await Audio.Sound.createAsync(SOUND_FILES[file]);
+      setPlayingSound(sound);
+      await sound.playAsync();
+    } catch (e) {
+      console.warn("Preview play error:", e);
+    }
+  };
 
   return (
     <Modal
@@ -74,7 +106,18 @@ function SoundPickerModal({ current, onSelect, onClose }) {
                 >
                   {sound.label}
                 </Text>
-                {active && <Text style={soundStyles.check}>✓</Text>}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 14,
+                  }}
+                >
+                  <TouchableOpacity onPress={() => playPreview(sound.file)}>
+                    <Text style={{ fontSize: 18 }}>▶️</Text>
+                  </TouchableOpacity>
+                  {active && <Text style={soundStyles.check}>✓</Text>}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -175,7 +218,7 @@ export default function AlarmModal({
 
   const handleSave = async () => {
     setSaving(true);
-    const alarmData = { ...form, sound: selectedSound };
+    const alarmData = { ...form, sound: selectedSound, active: true };
 
     try {
       if (alarm) {
@@ -183,7 +226,7 @@ export default function AlarmModal({
       } else {
         await createAlarm(alarmData);
       }
-      onSave(); // ← nasa try block — only called if Firebase succeeds
+      onSave();
       onClose();
     } catch (e) {
       console.error("Failed to save alarm:", e);

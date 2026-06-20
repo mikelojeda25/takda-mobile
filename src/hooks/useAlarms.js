@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  getDoc,
   query,
   where,
   arrayUnion,
@@ -30,10 +31,19 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS || type === EventType.ACTION_PRESS) {
     await notifee.cancelNotification(detail.notification.id);
   }
+  if (type === EventType.DELIVERED) {
+    const alarmId = detail.notification?.data?.alarmId;
+    if (alarmId) {
+      const snap = await getDoc(doc(db, "alarms", alarmId));
+      if (snap.exists() && snap.data().repeat === "once") {
+        await updateDoc(doc(db, "alarms", alarmId), { active: false });
+      }
+    }
+  }
 });
 
 async function getOrCreateChannel(soundName = "alarm_sound") {
-  const channelId = `channel-${soundName}`;
+  const channelId = `takda-alarm-${soundName}`;
   await notifee.createChannel({
     id: channelId,
     name: "Takda Alarms",
@@ -57,11 +67,16 @@ async function scheduleAlarmWithNotifee(alarm) {
   if (!alarm.active) return;
 
   const next = getNextAlarmDate(alarm);
-  if (!next || next < new Date()) return;
+  console.log("SCHEDULING:", alarm.title, "next:", next, "now:", new Date());
+  if (!next || next < new Date()) {
+    console.log("SKIPPED - time passed or null");
+    return;
+  }
 
   const soundToUse = alarm.sound || "alarm_sound";
   const channelId = await getOrCreateChannel(soundToUse);
 
+  console.log("CREATING TRIGGER for:", alarm.title, "at:", next);
   await notifee.createTriggerNotification(
     {
       id: alarm.id,
@@ -109,8 +124,6 @@ export function useAlarms() {
   const [alarms, setAlarms] = useState([]);
   const [alarmsLoading, setAlarmsLoading] = useState(true);
 
-  // FIX: was calling createNotifeeChannel() which doesn't exist
-  // replaced with getOrCreateChannel() using the default sound
   useEffect(() => {
     (async () => {
       await getOrCreateChannel("alarm_sound");
@@ -142,7 +155,6 @@ export function useAlarms() {
       setAlarmsLoading(false);
       return;
     }
-
     setAlarmsLoading(true);
 
     const q = query(
@@ -154,7 +166,18 @@ export function useAlarms() {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setAlarms(list);
       setAlarmsLoading(false);
-      list.forEach((alarm) => scheduleAlarmWithNotifee(alarm));
+      list.forEach((alarm) => {
+        // Auto-disable expired "once" alarms
+        if (
+          alarm.active &&
+          alarm.repeat === "once" &&
+          getNextAlarmDate(alarm) === null
+        ) {
+          updateDoc(doc(db, "alarms", alarm.id), { active: false });
+        } else {
+          scheduleAlarmWithNotifee(alarm);
+        }
+      });
     });
 
     return () => {
@@ -162,6 +185,21 @@ export function useAlarms() {
       setAlarmsLoading(true);
     };
   }, [user]);
+
+  useEffect(() => {
+    const unsub = notifee.onForegroundEvent(async ({ type, detail }) => {
+      if (type === EventType.DELIVERED) {
+        const alarmId = detail.notification?.data?.alarmId;
+        if (alarmId) {
+          const found = alarms.find((a) => a.id === alarmId);
+          if (found?.repeat === "once") {
+            await updateDoc(doc(db, "alarms", alarmId), { active: false });
+          }
+        }
+      }
+    });
+    return () => unsub();
+  }, [alarms]);
 
   const createAlarm = async (form) => {
     if (!user) return;

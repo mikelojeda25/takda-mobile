@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+
 import {
   View,
   Text,
@@ -8,9 +9,8 @@ import {
   Image,
   StatusBar,
   SafeAreaView,
-  Modal,
+  ActivityIndicator,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { colors, radius, spacing } from "../utils/theme";
 import { useAuth } from "../contexts/AuthContext";
 import { useAlarms } from "../hooks/useAlarms";
@@ -18,7 +18,6 @@ import AlarmCard from "../components/AlarmCard";
 import AlarmModal from "../components/AlarmModal";
 import AlarmDetailModal from "../components/AlarmDetailModal";
 import InviteModal from "../components/InviteModal";
-import ProfileModal from "../components/ProfileModal";
 import LoaderScreen from "../components/LoaderScreen";
 
 const FILTERS = [
@@ -42,8 +41,6 @@ export default function DashboardScreen({ navigation }) {
   const [editAlarm, setEditAlarm] = useState(null);
   const [detailAlarm, setDetailAlarm] = useState(null);
   const [inviteAlarm, setInviteAlarm] = useState(null);
-  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
 
   const filtered = alarms.filter((a) => {
     if (filter === "mine") return a.createdBy === user?.uid;
@@ -72,12 +69,7 @@ export default function DashboardScreen({ navigation }) {
               Hey, {user?.displayName?.split(" ")[0]} 👋
             </Text>
           </View>
-
-          {/* Avatar tap → dropdown */}
-          <TouchableOpacity
-            onPress={() => setShowAvatarMenu(true)}
-            style={styles.avatarWrap}
-          >
+          <TouchableOpacity onPress={logout} style={styles.avatarWrap}>
             {user?.photoURL ? (
               <Image source={{ uri: user.photoURL }} style={styles.avatar} />
             ) : (
@@ -161,96 +153,7 @@ export default function DashboardScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Avatar dropdown menu */}
-      <Modal
-        visible={showAvatarMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAvatarMenu(false)}
-      >
-        <TouchableOpacity
-          style={styles.menuOverlay}
-          activeOpacity={1}
-          onPress={() => setShowAvatarMenu(false)}
-        >
-          <View style={styles.menuCard}>
-            {/* Mini user info at top of menu */}
-            <View style={styles.menuUser}>
-              {user?.photoURL ? (
-                <Image
-                  source={{ uri: user.photoURL }}
-                  style={styles.menuAvatar}
-                />
-              ) : (
-                <View style={[styles.menuAvatar, styles.avatarFallback]}>
-                  <Text style={{ color: colors.accent, fontWeight: "700" }}>
-                    {user?.displayName?.[0] || "U"}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.menuName} numberOfLines={1}>
-                  {user?.displayName || "User"}
-                </Text>
-                <Text style={styles.menuEmail} numberOfLines={1}>
-                  {user?.email || ""}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.menuDivider} />
-
-            {/* Profile */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setShowAvatarMenu(false);
-                setShowProfile(true);
-              }}
-            >
-              <Feather
-                name="user"
-                size={16}
-                color={colors.text2}
-                style={styles.menuItemIcon}
-              />
-              <Text style={styles.menuItemText}>Profile</Text>
-            </TouchableOpacity>
-
-            <View style={styles.menuDivider} />
-
-            {/* Logout */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setShowAvatarMenu(false);
-                logout();
-              }}
-            >
-              <Feather
-                name="log-out"
-                size={16}
-                color="#e05252"
-                style={styles.menuItemIcon}
-              />
-              <Text style={[styles.menuItemText, { color: "#e05252" }]}>
-                Sign out
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Profile modal */}
-      {showProfile && (
-        <ProfileModal
-          user={user}
-          onClose={() => setShowProfile(false)}
-          onLogout={logout}
-        />
-      )}
-
-      {/* Alarm modals */}
+      {/* Modals */}
       {(showCreate || editAlarm) && (
         <AlarmModal
           alarm={editAlarm}
@@ -320,50 +223,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { color: colors.accent, fontWeight: "700", fontSize: 16 },
-
-  // Dropdown menu
-  menuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: 60,
-    paddingRight: spacing.md,
-  },
-  menuCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minWidth: 220,
-    overflow: "hidden",
-  },
-  menuUser: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: spacing.md,
-    gap: 10,
-  },
-  menuAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-  },
-  menuName: { fontSize: 14, fontWeight: "700", color: colors.text },
-  menuEmail: { fontSize: 12, color: colors.text3, marginTop: 1 },
-  menuDivider: { height: 1, backgroundColor: colors.border },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 13,
-    paddingHorizontal: spacing.md,
-  },
-  menuItemIcon: { marginRight: 10 },
-  menuItemText: { fontSize: 14, color: colors.text2, fontWeight: "500" },
-
-  // Filters
   filters: {
     flexDirection: "row",
     paddingHorizontal: spacing.md,

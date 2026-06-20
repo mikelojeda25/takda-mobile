@@ -56,11 +56,6 @@
       "@react-native-google-signin/google-signin"
     ],
     "scheme": "takda",
-    "extra": {
-      "eas": {
-        "projectId": "2d3a7684-6102-4f91-934f-88d3032ffd30"
-      }
-    },
     "owner": "mikelojeda25"
   }
 }

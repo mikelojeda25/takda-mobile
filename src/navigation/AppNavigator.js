@@ -19,12 +19,14 @@ export default function AppNavigator() {
   const { user, authLoading } = useAuth();
   const [ringingAlarm, setRingingAlarm] = useState(null);
   const ringingRef = useRef(null);
+  const dismissedAlarms = useRef(new Set());
 
-  const triggerRing = async (alarm) => {
-    await AsyncStorage.setItem("ringingAlarm", JSON.stringify(alarm));
+  const triggerRing = (alarm) => {
+    if (dismissedAlarms.current.has(alarm.id)) return; // already dismissed
     ringingRef.current = alarm;
     setRingingAlarm(alarm);
   };
+
   useEffect(() => {
     AsyncStorage.getItem("ringingAlarm").then((val) => {
       if (val) {
@@ -87,7 +89,9 @@ export default function AppNavigator() {
         <AlarmRingScreen
           alarm={ringingAlarm}
           onDismiss={() => {
-            AsyncStorage.removeItem("ringingAlarm");
+            dismissedAlarms.current.add(ringingAlarm.id);
+            notifee.cancelNotification(ringingAlarm.id).catch(() => {});
+            notifee.cancelTriggerNotification(ringingAlarm.id).catch(() => {});
             ringingRef.current = null;
             setRingingAlarm(null);
           }}

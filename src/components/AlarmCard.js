@@ -27,6 +27,10 @@ export default function AlarmCard({
   const isOwner = alarm.createdBy === currentUser?.uid;
   const nextDate = alarm.active ? getNextAlarmDate(alarm) : null;
 
+  const checkDate = { ...alarm, active: true };
+  const isExpired =
+    alarm.repeat === "once" && getNextAlarmDate(checkDate) === null;
+
   return (
     <TouchableOpacity
       style={[styles.card, !alarm.active && styles.cardInactive]}
@@ -68,10 +72,17 @@ export default function AlarmCard({
 
       <View style={styles.right}>
         <Switch
-          value={!!alarm.active}
-          onValueChange={() => onToggle(alarm.id, alarm.active)}
+          value={!!alarm.active && !isExpired}
+          onValueChange={() => !isExpired && onToggle(alarm.id, alarm.active)}
+          disabled={isExpired}
           trackColor={{ false: colors.surface3, true: colors.accent + "60" }}
-          thumbColor={alarm.active ? colors.accent : colors.text3}
+          thumbColor={
+            isExpired
+              ? colors.text3
+              : alarm.active
+                ? colors.accent
+                : colors.text3
+          }
         />
 
         {isOwner ? (
